@@ -1,0 +1,47 @@
+
+    #main-grid {
+        layout: grid;
+        grid-size: 2;
+        grid-columns: 35% 1fr;
+        grid-rows: 1fr;
+        height: 100%;
+        width: 100%;
+    }
+    
+    #left-column {
+        height: 100%;
+        layout: vertical;
+    }
+    
+    #right-column {
+        height: 100%;
+        layout: vertical;
+    }
+
+    #status {
+        height: 10;
+        border: solid cyan;
+    }
+    
+    #sensor {
+        height: 1fr;
+        border: solid yellow;
+    }
+    
+    #message {
+        height: 1fr;
+        border: solid green;
+    }
+    
+    #logs {
+        height: 1fr;
+        border: solid grey;
+    }
+    
+    #stats-footer {
+        dock: bottom;
+        height: 1;
+        width: 100%;
+        background: $surface;
+    }
+    
