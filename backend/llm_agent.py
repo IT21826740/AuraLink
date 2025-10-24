@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+import random
 
 load_dotenv()
 
@@ -25,23 +26,26 @@ class LLMAgent:
         )
         print("LLM Agent initialized with Groq (Free API)")
 
-    def generate_quote(self, temperature, humidity, pressure=None):
+    def generate_quote(self, temperature, humidity, pressure=None, air_quality=None):
         """Generate literature-style quote based on sensor data"""
         
         temp_desc = "warm" if temperature > 25 else "cool" if temperature < 20 else "comfortable"
         humidity_desc = "humid" if humidity > 60 else "dry" if humidity < 40 else "balanced"
+        air_desc = "clear" if air_quality is None or air_quality < 400 else "hazy" if air_quality < 600 else "stale"
+        
+        styles = ["Rilke", "Shakespeare", "Thoreau", "Rumi"]  # ADD: Random style
+        style = random.choice(styles)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a poetic literary assistant that creates beautiful, 
-            inspiring quotes based on environmental conditions. Your quotes should be:
-            - Short (max 2 sentences, under 100 characters total)
-            - Poetic and metaphorical
-            - Related to the indoor environment
-            - Uplifting and thought-provoking
-            - In the style of famous authors or philosophers"""),
-            ("user", """The room is {temp_desc} at {temperature}°C and {humidity_desc} 
-            with {humidity}% humidity. Generate ONE beautiful quote that reflects 
-            this atmosphere.""")
+            ("system", f"""You are a poetic literary assistant in the style of {style} that creates beautiful, 
+                inspiring quotes based on environmental conditions. Your quotes should be:
+                - Short (max 2 sentences, under 100 characters total)
+                - Poetic and metaphorical
+                - Related to the indoor environment ({temp_desc}, {humidity_desc}, {air_desc} air)
+                - Uplifting and thought-provoking
+                - Vary your metaphors each time."""),
+            ("user", """The room is {temp_desc} at {temperature}°C, {humidity_desc} with {humidity}% humidity, 
+                and {air_desc} air. Generate ONE beautiful quote that reflects this atmosphere.""")
         ])
         
         try:
@@ -51,7 +55,8 @@ class LLMAgent:
                 "temperature": temperature,
                 "humidity": humidity,
                 "temp_desc": temp_desc,
-                "humidity_desc": humidity_desc
+                "humidity_desc": humidity_desc,
+                "air_desc": air_desc
             })
 
             return quote.strip().strip('"').strip("'")
@@ -122,7 +127,8 @@ class LLMAgent:
         quote = self.generate_quote(
             sensor_data['temperature'],
             sensor_data['humidity'],
-            sensor_data.get('pressure')
+            sensor_data.get('pressure'),
+            sensor_data.get('airQuality')
         )
         
         email_summary, priority = self.summarize_emails(emails)

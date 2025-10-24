@@ -102,6 +102,7 @@ class AuraLinkSystem:
         if not self.running.is_set():
             return
             
+        sensor_data['timestamp'] = datetime.now().isoformat()
         self.latest_sensor_data = sensor_data
         
         self.app.call_from_thread(self.app.update_sensor, sensor_data)
@@ -201,8 +202,7 @@ class SensorWidget(Static):
         
         table.add_row("Temperature", f"{self.sensor_data.get('temperature', 'N/A')}°C")
         table.add_row("Humidity", f"{self.sensor_data.get('humidity', 'N/A')}%")
-        if 'pressure' in self.sensor_data:
-            table.add_row("Pressure", f"{self.sensor_data.get('pressure', 'N/A')} hPa")
+        table.add_row("Air Quality", f"{self.sensor_data.get('airQuality', 'N/A')}")
         table.add_row("Updated", self.sensor_data.get('timestamp', 'N/A'))
         
         return Panel(table, title="Sensor Data", border_style="yellow")
