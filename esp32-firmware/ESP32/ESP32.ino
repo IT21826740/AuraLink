@@ -105,7 +105,14 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0, 0);
-  display.println("Initializing...");
+  display.println("====================");
+  display.println("     AuraLink");
+  display.println("====================");
+  display.println();
+  display.println("  Initializing...");
+  display.println();
+  display.println("  [*] Sensors");
+  display.println("  [*] Display");
   display.display();
   Serial.println("OLED initialized");
 
@@ -169,10 +176,16 @@ void setupWiFi() {
   delay(10);
   Serial.print("Connecting to WiFi: ");
   Serial.println(ssid);
-  
+
   display.clearDisplay();
   display.setCursor(0, 0);
-  display.println("Connecting...");
+  display.println("====================");
+  display.println("  Network Setup");
+  display.println("====================");
+  display.println();
+  display.println("Connecting to WiFi...");
+  display.println();
+  display.print("SSID: ");
   display.println(ssid);
   display.display();
 
@@ -182,49 +195,130 @@ void setupWiFi() {
   while (WiFi.status() != WL_CONNECTED && attempts < 30) {
     delay(500);
     Serial.print(".");
+
+    // Update connection progress on display
+    if (attempts % 3 == 0) {
+      display.setCursor(100, 56);
+      display.print("   ");
+      display.setCursor(100, 56);
+      display.print(".");
+      display.display();
+    } else if (attempts % 3 == 1) {
+      display.setCursor(100, 56);
+      display.print("..");
+      display.display();
+    } else {
+      display.setCursor(100, 56);
+      display.print("...");
+      display.display();
+    }
+
     attempts++;
   }
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
 
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\nWiFi connected!");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
-    
+
+    display.println("====================");
+    display.println("  WiFi Connected!");
+    display.println("====================");
+    display.println();
+    display.println("Status: [OK]");
+    display.println();
+    display.print("IP: ");
+    display.println(WiFi.localIP());
+    display.display();
+
     setRGBColor(0, 255, 0);
     beep(200);
-    delay(1000);
+    delay(2000);
     setRGBColor(0, 0, 0);
   } else {
     Serial.println("\nWiFi connection failed!");
+
+    display.println("====================");
+    display.println("  WiFi Failed!");
+    display.println("====================");
+    display.println();
+    display.println("Status: [ERROR]");
+    display.println();
+    display.println("Check credentials");
+    display.println("and try again");
+    display.display();
+
     setRGBColor(255, 0, 0);
   }
 }
 
 void reconnectMQTT() {
-  while (!client.connected()) {
-    Serial.print("Connecting to MQTT...");
-    
-    String clientId = "AuraLink-ESP32-";
-    clientId += String(random(0xffff), HEX);
+  static unsigned long lastAttempt = 0;
+  static bool displayingError = false;
 
-    if (client.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
-      Serial.println("connected!");
-      
-      client.subscribe(topic_quote);
-      client.subscribe(topic_email);
-      client.subscribe(topic_priority);
-      
-      Serial.println("Subscribed to topics");
-      setRGBColor(0, 0, 255);
-      beep(100);
-      delay(500);
-      setRGBColor(0, 0, 0);
-    } else {
-      Serial.print("Failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" Retrying in 5 seconds...");
-      setRGBColor(255, 0, 0);
-      delay(5000);
+  while (!client.connected()) {
+    unsigned long now = millis();
+
+    if (now - lastAttempt > 5000) {
+      Serial.print("Connecting to MQTT...");
+
+      String clientId = "AuraLink-ESP32-";
+      clientId += String(random(0xffff), HEX);
+
+      if (client.connect(clientId.c_str(), mqtt_user, mqtt_password)) {
+        Serial.println("connected!");
+
+        client.subscribe(topic_quote);
+        client.subscribe(topic_email);
+        client.subscribe(topic_priority);
+
+        Serial.println("Subscribed to topics");
+
+        // Brief connection success indication
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.println("====================");
+        display.println("  MQTT Connected");
+        display.println("====================");
+        display.println();
+        display.println("Status: [OK]");
+        display.println();
+        display.println("System ready!");
+        display.display();
+
+        setRGBColor(0, 0, 255);
+        beep(100);
+        delay(1000);
+        setRGBColor(0, 0, 0);
+
+        displayingError = false;
+      } else {
+        Serial.print("Failed, rc=");
+        Serial.print(client.state());
+        Serial.println(" Retrying in 5 seconds...");
+
+        if (!displayingError) {
+          display.clearDisplay();
+          display.setCursor(0, 0);
+          display.println("====================");
+          display.println(" MQTT Connecting...");
+          display.println("====================");
+          display.println();
+          display.println("Status: [WAIT]");
+          display.println();
+          display.println("Broker:");
+          display.println(mqtt_server);
+          display.display();
+          displayingError = true;
+        }
+
+        setRGBColor(255, 0, 0);
+        lastAttempt = now;
+        delay(5000);
+      }
     }
   }
 }
@@ -317,46 +411,89 @@ String getScrollingText(String text) {
 void updateDisplay() {
   display.clearDisplay();
   display.setTextSize(1);
-  display.setCursor(0, 0);
 
   if (showingEmail) {
-    display.println("*** EMAILS ***");
+    // Email view with professional header
+    display.setCursor(0, 0);
+    display.println("====================");
+    display.println("   EMAIL SUMMARY");
+    display.println("====================");
     display.println();
-    
+
     int lineLength = 21;
     int startPos = 0;
-    int line = 2;
-    
+    int line = 4;
+
     while (startPos < currentEmail.length() && line < 8) {
       String segment = currentEmail.substring(startPos, startPos + lineLength);
+      display.setCursor(0, line * 8);
       display.println(segment);
       startPos += lineLength;
       line++;
     }
   } else {
-    display.println("*** AuraLink ***");
+    // Main view with professional layout
+    // Header section
+    display.setCursor(0, 0);
+    display.println("==== AuraLink v1.0 ====");
 
-    display.print("Temp: ");
+    // Environmental readings section
+    display.setCursor(0, 10);
+    display.print("[T]");
+    display.setCursor(20, 10);
     display.print(temperature, 1);
-    display.println("C");
-    
-    display.print("Hum: ");
+    display.print("C");
+
+    // Temperature status indicator
+    String tempStatus = "";
+    if (temperature > 30) tempStatus = " [!]";
+    else if (temperature < 18) tempStatus = " [*]";
+    display.print(tempStatus);
+
+    display.setCursor(0, 20);
+    display.print("[H]");
+    display.setCursor(20, 20);
     display.print(humidity, 0);
-    display.println("%");
+    display.print("%");
 
-    display.print("Air Quality: ");
-    display.print(airQuality);  
-    display.println();
+    // Humidity status indicator
+    String humStatus = "";
+    if (humidity < 30 || humidity > 60) humStatus = " [!]";
+    display.print(humStatus);
 
-    display.println("---------------");
-    
+    display.setCursor(0, 30);
+    display.print("[A]");
+    display.setCursor(20, 30);
+
+    // Air quality with interpretation
+    String aqStatus = "";
+    if (airQuality < 800) {
+      aqStatus = "Good";
+    } else if (airQuality < 1500) {
+      aqStatus = "Moderate";
+    } else {
+      aqStatus = "Poor";
+    }
+    display.print(airQuality);
+    display.print(" ");
+    display.print(aqStatus);
+
+    // Separator line
+    display.setCursor(0, 40);
+    display.println("--------------------");
+
+    // Quote section with scrolling
+    display.setCursor(0, 48);
     String quoteDisplay = getScrollingText(currentQuote);
-    display.println(quoteDisplay);
-    
-    display.println("---------------");
-    String emailDisplay = getScrollingText(currentEmail);
-    display.print("Emails: ");
-    display.println(emailDisplay);
+    display.print(quoteDisplay);
+
+    // Email indicator at bottom
+    display.setCursor(0, 56);
+    if (currentEmail.length() > 0 && currentEmail != "No emails yet") {
+      display.print("[M] Press for email");
+    } else {
+      display.print("No new messages");
+    }
   }
 
   display.display();

@@ -164,7 +164,7 @@ class AuraLinkSystem:
 
 
 class StatusWidget(Static):
-    
+
     system_status = reactive({
         'mqtt': ('Disconnected', 'red'),
         'llm': ('Not Initialized', 'yellow'),
@@ -173,14 +173,38 @@ class StatusWidget(Static):
     })
 
     def render(self) -> Panel:
-        table = Table(show_header=False, box=box.SIMPLE, padding=(0, 1))
-        table.add_column("Component", style="cyan")
-        table.add_column("Status")
-        
+        table = Table(show_header=False, box=box.ROUNDED, padding=(0, 2), expand=True)
+        table.add_column("Component", style="bold cyan", ratio=1)
+        table.add_column("Status", ratio=2)
+
+        status_icons = {
+            'green': '●',
+            'yellow': '▲',
+            'red': '✗',
+            'white': '○'
+        }
+
+        component_labels = {
+            'mqtt': 'MQTT Broker',
+            'llm': 'LLM Agent',
+            'email': 'Email Service',
+            'last_update': 'Last Update'
+        }
+
         for component, (status, color) in self.system_status.items():
-            table.add_row(component.upper(), f"[{color}]{status}[/{color}]")
-            
-        return Panel(table, title="System Status", border_style="cyan")
+            icon = status_icons.get(color, '○')
+            label = component_labels.get(component, component.upper())
+            table.add_row(
+                f"{label}",
+                f"[{color}]{icon}[/{color}] [{color}]{status}[/{color}]"
+            )
+
+        return Panel(
+            table,
+            title="[bold cyan]═══ System Status ═══[/bold cyan]",
+            border_style="bright_cyan",
+            padding=(1, 1)
+        )
 
     def update_status(self, component: str, status: str, color: str):
         new_status = self.system_status.copy()
@@ -189,23 +213,74 @@ class StatusWidget(Static):
 
 
 class SensorWidget(Static):
-    
+
     sensor_data = reactive({})
 
     def render(self) -> Panel:
         if not self.sensor_data:
-            return Panel("Waiting for sensor data...", title="Sensor Data", border_style="yellow")
+            content = Text()
+            content.append("\n   ", style="")
+            content.append("◌", style="dim yellow")
+            content.append("  Awaiting sensor data stream...\n", style="dim italic")
+            return Panel(
+                content,
+                title="[bold yellow]═══ Environmental Sensors ═══[/bold yellow]",
+                border_style="bright_yellow",
+                padding=(1, 1)
+            )
 
-        table = Table(show_header=False, box=box.SIMPLE, padding=(0, 1))
-        table.add_column("Metric", style="yellow")
-        table.add_column("Value", style="white")
-        
-        table.add_row("Temperature", f"{self.sensor_data.get('temperature', 'N/A')}°C")
-        table.add_row("Humidity", f"{self.sensor_data.get('humidity', 'N/A')}%")
-        table.add_row("Air Quality", f"{self.sensor_data.get('airQuality', 'N/A')}")
-        table.add_row("Updated", self.sensor_data.get('timestamp', 'N/A'))
-        
-        return Panel(table, title="Sensor Data", border_style="yellow")
+        table = Table(show_header=False, box=box.ROUNDED, padding=(0, 2), expand=True)
+        table.add_column("Metric", style="bold yellow", ratio=2)
+        table.add_column("Value", justify="right", style="white", ratio=3)
+
+        temp = self.sensor_data.get('temperature', 'N/A')
+        humidity = self.sensor_data.get('humidity', 'N/A')
+        air_quality = self.sensor_data.get('airQuality', 'N/A')
+
+        temp_color = "red" if isinstance(temp, (int, float)) and temp > 30 else "cyan" if isinstance(temp, (int, float)) and temp < 18 else "green"
+        humidity_color = "yellow" if isinstance(humidity, (int, float)) and (humidity < 30 or humidity > 60) else "green"
+
+        air_quality_status = "N/A"
+        air_quality_color = "white"
+        if isinstance(air_quality, int):
+            if air_quality < 800:
+                air_quality_status = "Good"
+                air_quality_color = "green"
+            elif air_quality < 1500:
+                air_quality_status = "Moderate"
+                air_quality_color = "yellow"
+            else:
+                air_quality_status = "Poor"
+                air_quality_color = "red"
+
+        table.add_row(
+            "[T] Temperature",
+            f"[{temp_color}]{temp}°C[/{temp_color}]" if temp != 'N/A' else "N/A"
+        )
+        table.add_row(
+            "[H] Humidity",
+            f"[{humidity_color}]{humidity}%[/{humidity_color}]" if humidity != 'N/A' else "N/A"
+        )
+        table.add_row(
+            "[A] Air Quality",
+            f"[{air_quality_color}]{air_quality} ({air_quality_status})[/{air_quality_color}]" if air_quality != 'N/A' else "N/A"
+        )
+
+        timestamp = self.sensor_data.get('timestamp', 'N/A')
+        if timestamp != 'N/A' and 'T' in timestamp:
+            timestamp = timestamp.split('T')[1].split('.')[0]
+
+        table.add_row(
+            "[*] Last Reading",
+            f"[dim]{timestamp}[/dim]"
+        )
+
+        return Panel(
+            table,
+            title="[bold yellow]═══ Environmental Sensors ═══[/bold yellow]",
+            border_style="bright_yellow",
+            padding=(1, 1)
+        )
 
 
 class MessageWidget(Static):
@@ -214,54 +289,100 @@ class MessageWidget(Static):
 
     def render(self) -> Panel:
         if not self.latest_message:
-            return Panel("No messages generated yet", title="Latest Message to Device", border_style="green")
-        
+            content = Text()
+            content.append("\n   ", style="")
+            content.append("◌", style="dim green")
+            content.append("  No messages sent to device yet\n", style="dim italic")
+            return Panel(
+                content,
+                title="[bold green]═══ Device Messages ═══[/bold green]",
+                border_style="bright_green",
+                padding=(1, 1)
+            )
+
         message_content = Text()
-        message_content.append("Quote:\n", style="bold green")
-        message_content.append(f"{self.latest_message.get('quote', 'N/A')}\n\n", style="italic")
-        message_content.append("Email Summary:\n", style="bold blue")
-        message_content.append(f"{self.latest_message.get('email_summary', 'No emails')}\n\n")
-        
+
+        message_content.append("┌─ INSPIRATIONAL QUOTE", style="bold bright_green")
+        message_content.append("\n│\n", style="bright_green")
+        quote_lines = self.latest_message.get('quote', 'N/A').split('\n')
+        for line in quote_lines:
+            message_content.append("│  ", style="bright_green")
+            message_content.append(f"{line}\n", style="italic white")
+        message_content.append("└", style="bright_green")
+        message_content.append("─" * 50 + "\n\n", style="bright_green")
+
+        message_content.append("┌─ EMAIL SUMMARY", style="bold bright_blue")
+        message_content.append("\n│\n", style="bright_blue")
+        email_summary = self.latest_message.get('email_summary', 'No emails')
+        email_lines = email_summary.split('\n')
+        for line in email_lines:
+            message_content.append("│  ", style="bright_blue")
+            message_content.append(f"{line}\n", style="white")
+        message_content.append("└", style="bright_blue")
+        message_content.append("─" * 50 + "\n\n", style="bright_blue")
+
         priority = self.latest_message.get('priority', 'low')
         priority_colors = {'high': 'red', 'medium': 'yellow', 'low': 'green'}
-        message_content.append("Priority: ", style="bold")
-        message_content.append(priority.upper(), style=f"bold {priority_colors.get(priority, 'white')}")
-        
-        return Panel(message_content, title="Latest Message to Device", border_style="green")
+        priority_icons = {'high': '[!]', 'medium': '[~]', 'low': '[✓]'}
+        priority_color = priority_colors.get(priority, 'white')
+        priority_icon = priority_icons.get(priority, '[·]')
+
+        message_content.append("PRIORITY LEVEL: ", style="bold white")
+        message_content.append(f"{priority_icon} {priority.upper()}", style=f"bold {priority_color}")
+
+        return Panel(
+            message_content,
+            title="[bold green]═══ Device Messages ═══[/bold green]",
+            border_style="bright_green",
+            padding=(1, 2)
+        )
 
 
 class StatsWidget(Static):
-    
+
     stats = reactive({
         'messages_sent': 0,
         'emails_processed': 0,
         'sensor_readings': 0,
     })
-    
+
     uptime_start = reactive(datetime.now())
     uptime_str = reactive("0:00:00")
-    
+
     def on_mount(self):
         self.set_interval(1.0, self.update_uptime)
 
     def update_uptime(self):
         uptime_delta = datetime.now() - self.uptime_start
         self.uptime_str = str(uptime_delta).split('.')[0]
-    
+
     def increment_stat(self, key: str, amount: int = 1):
         new_stats = self.stats.copy()
         new_stats[key] += amount
         self.stats = new_stats
 
     def render(self) -> Text:
-        return Text(
-            f"Uptime: {self.uptime_str} | "
-            f"Readings: {self.stats['sensor_readings']} | "
-            f"Messages: {self.stats['messages_sent']} | "
-            f"Emails: {self.stats['emails_processed']}",
-            justify="center",
-            style="dim"
-        )
+        content = Text(justify="center")
+        content.append("[", style="dim")
+        content.append("UPTIME", style="bold bright_white")
+        content.append("] ", style="dim")
+        content.append(f"{self.uptime_str}", style="cyan")
+        content.append("  |  ", style="dim")
+        content.append("[", style="dim")
+        content.append("READINGS", style="bold bright_white")
+        content.append("] ", style="dim")
+        content.append(f"{self.stats['sensor_readings']}", style="yellow")
+        content.append("  |  ", style="dim")
+        content.append("[", style="dim")
+        content.append("MESSAGES", style="bold bright_white")
+        content.append("] ", style="dim")
+        content.append(f"{self.stats['messages_sent']}", style="green")
+        content.append("  |  ", style="dim")
+        content.append("[", style="dim")
+        content.append("EMAILS", style="bold bright_white")
+        content.append("] ", style="dim")
+        content.append(f"{self.stats['emails_processed']}", style="blue")
+        return content
 
 
 class AuraLinkTUI(App):
@@ -286,7 +407,7 @@ class AuraLinkTUI(App):
         self.stats_footer = StatsWidget(id="stats-footer")
 
     def compose(self) -> ComposeResult:
-        yield Header(name="AuraLink Smart IoT System")
+        yield Header(name="AuraLink IoT Intelligence Platform")
         with Grid(id="main-grid"):
             with Vertical(id="left-column"):
                 yield self.status_widget
@@ -298,9 +419,13 @@ class AuraLinkTUI(App):
         yield Footer()
 
     async def on_mount(self) -> None:
-        self.log_widget.write("[yellow]TUI mounted. Initializing system in background...[/yellow]")
+        self.log_widget.write("[bold bright_cyan]" + "=" * 60 + "[/bold bright_cyan]")
+        self.log_widget.write("[bold bright_cyan]        AuraLink IoT Intelligence Platform v1.0[/bold bright_cyan]")
+        self.log_widget.write("[bold bright_cyan]" + "=" * 60 + "[/bold bright_cyan]")
+        self.log_widget.write("")
+        self.log_widget.write("[dim]> Initializing system components...[/dim]")
         self.run_worker(self.system.initialize_components, group="init_worker", thread=True)
-        self.log_widget.write("[yellow]System initialization worker started.[/yellow]")
+        self.log_widget.write("[dim]> System initialization worker started[/dim]")
 
     def action_quit(self) -> None:
         self.log_info("Shutdown requested by user...")
@@ -321,13 +446,16 @@ class AuraLinkTUI(App):
             self.notify("Logs hidden (press 'l' to show)")
 
     def log_info(self, message: str):
-        self.log_widget.write(message)
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_widget.write(f"[dim]{timestamp}[/dim] [cyan]INFO[/cyan]  {message}")
 
     def log_warning(self, message: str):
-        self.log_widget.write(f"[yellow]WARN:[/] {message}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_widget.write(f"[dim]{timestamp}[/dim] [yellow]WARN[/yellow]  {message}")
 
     def log_error(self, message: str):
-        self.log_widget.write(f"[red]ERROR:[/] {message}")
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_widget.write(f"[dim]{timestamp}[/dim] [red]ERROR[/red] {message}")
 
     def update_status(self, component: str, status: str, color: str):
         self.status_widget.update_status(component, status, color)
@@ -348,50 +476,80 @@ class AuraLinkTUI(App):
 
 if __name__ == "__main__":
     css = """
+    Screen {
+        background: $surface;
+    }
+
+    Header {
+        background: $primary;
+        color: $text;
+        text-style: bold;
+    }
+
+    Footer {
+        background: $panel;
+    }
+
     #main-grid {
         layout: grid;
         grid-size: 2;
-        grid-columns: 35% 1fr;
+        grid-columns: 38% 1fr;
         grid-rows: 1fr;
         height: 100%;
         width: 100%;
+        padding: 0 1;
     }
-    
+
     #left-column {
         height: 100%;
         layout: vertical;
+        padding: 0 1 0 0;
     }
-    
+
     #right-column {
         height: 100%;
         layout: vertical;
+        padding: 0 0 0 1;
     }
 
     #status {
-        height: 10;
-        border: solid cyan;
+        height: 12;
+        margin: 1 0;
+        border: rounded $primary;
+        background: $surface;
     }
-    
+
     #sensor {
         height: 1fr;
-        border: solid yellow;
+        margin: 1 0;
+        border: rounded $primary;
+        background: $surface;
     }
-    
+
     #message {
         height: 1fr;
-        border: solid green;
+        margin: 1 0;
+        border: rounded $primary;
+        background: $surface;
     }
-    
+
     #logs {
         height: 1fr;
-        border: solid grey;
+        margin: 1 0;
+        border: rounded $primary;
+        background: $surface;
     }
-    
+
     #stats-footer {
         dock: bottom;
         height: 1;
         width: 100%;
-        background: $surface;
+        background: $panel;
+        padding: 0 2;
+    }
+
+    RichLog {
+        scrollbar-gutter: stable;
     }
     """
     with open("app.tcss", "w") as f:
