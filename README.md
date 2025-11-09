@@ -125,7 +125,7 @@ q - Quit gracefully
 
 #### 1. Clone Repository
 ```bash
-git clone https://github.com/<your-username>/AuraLink.git
+https://github.com/rayanweragala/AuraLink.git
 cd AuraLink
 ````
 
