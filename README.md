@@ -2,20 +2,6 @@
 
 ---
 
-```markdown
-<h1 align="center">🌐 AuraLink – AI-Powered Smart IoT System</h1>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11+-blue.svg" alt="Python">
-  <img src="https://img.shields.io/badge/ESP32-Arduino-orange.svg" alt="ESP32">
-  <img src="https://img.shields.io/badge/MQTT-Message%20Broker-green.svg" alt="MQTT">
-  <img src="https://img.shields.io/badge/AI-Llama3%20(Groq)-purple.svg" alt="Llama3 Groq">
-  <img src="https://img.shields.io/badge/Gmail%20API-Integration-red.svg" alt="Gmail API">
-  <img src="https://img.shields.io/github/license/dondilini/AuraLink.svg" alt="License">
-</p>
-
----
-
 ### 🧠 Overview
 
 **AuraLink** is an advanced **AI-integrated IoT ecosystem** that bridges the gap between **environmental sensing** and **intelligent communication**.  
